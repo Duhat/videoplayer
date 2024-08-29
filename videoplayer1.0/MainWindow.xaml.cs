@@ -1,18 +1,31 @@
 ﻿using Microsoft.Win32;
 using System;
 using System.Windows;
+using System.Windows.Threading;
 using TagLib;
 
 namespace videoplayer1._0
 {
     public partial class MainWindow : Window
-    {
+    { 
+        
+        string videoFilePath = "";
+        DispatcherTimer timer;
         public MainWindow()
         {
             InitializeComponent();
+            timer = new DispatcherTimer();
+            timer.Interval =TimeSpan.FromMilliseconds(100);
+            timer.Tick += Timer_Tick;
+            timer.Start();
         }
 
-        string videoFilePath = "";
+        private void Timer_Tick(object? sender, EventArgs e)
+        {
+            timeSlider.Value = videoPlayer.Position.TotalMilliseconds;
+        }
+
+       
 
         private void OpenVideo_Click(object sender, RoutedEventArgs e)
         {
@@ -32,7 +45,9 @@ namespace videoplayer1._0
                 string comment = GetFileComment(videoFilePath);
                 commentTextBlock.Text = comment ?? "Комментарий отсутствует";
 
+                mediaContol();
                 videoPlayer.Play();
+
             }
         }
 
@@ -43,6 +58,7 @@ namespace videoplayer1._0
 
         private void PlayVideo_Click(object sender, RoutedEventArgs e)
         {
+            mediaContol();
             videoPlayer.Play();
         }
 
@@ -68,6 +84,37 @@ namespace videoplayer1._0
         }
 
         #endregion
+
+
+        #region slider videoControl
+        private void mediaContol()
+        {
+            videoPlayer.Volume = (double)volumeSlider.Value;
+            videoPlayer.SpeedRatio = (double)speedSlider.Value;
+        }
+
+        private void volumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            videoPlayer.Volume = (double)volumeSlider.Value;
+        }
+        private void speedSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            videoPlayer.SpeedRatio = (double)speedSlider.Value;
+        }
+        private void timeSlider_LostMouseCapture(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            videoPlayer.Position = TimeSpan.FromMilliseconds(timeSlider.Value);
+            videoPlayer.Play();
+            timer.Start();
+        }
+        private void timeSlider_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            videoPlayer.Pause();
+            timer.Stop();
+        }
+        #endregion
+
+        #region update info
 
         private string RenameFile(string newFileName)
         {
@@ -131,11 +178,16 @@ namespace videoplayer1._0
                 MessageBox.Show($"Ошибка при записи метаданных: {ex.Message}");
             }
         }
+        #endregion
 
 
-
-        private void VideoPlayer_MediaOpened(object sender, RoutedEventArgs e)
+        private void VideoPlayer_MediaOpened(object sender, RoutedEventArgs e) //размер медиалемента
         {
+            mediaContol();
+            timeSlider.Maximum = videoPlayer.NaturalDuration.TimeSpan.TotalMilliseconds;
+
+
+
             var videoWidth = videoPlayer.NaturalVideoWidth;
             var videoHeight = videoPlayer.NaturalVideoHeight;
 
@@ -144,5 +196,12 @@ namespace videoplayer1._0
             this.Height = Math.Max(Math.Min(videoHeight + 100, 1080), 240); // Ограничиваем высоту
         }
 
+
+        private void VideoPlayer_MediaEnded(object sender, RoutedEventArgs e) { 
+        
+            videoPlayer.Stop();
+        }
+
+        
     }
 }
